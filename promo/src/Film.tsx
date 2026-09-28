@@ -26,7 +26,7 @@ export const Film: React.FC = () => (
       <Outro />
     </Sequence>
     <Grain />
-    {/* 音效由 scripts/make-sfx.py 按 timeline.json 合成，运行 pnpm sfx 生成 */}
+    {/* 配乐和音效由 scripts/make-audio.py 按 timeline.json 合成，运行 pnpm audio 生成 */}
     <Html5Audio src={staticFile('sfx/soundtrack.wav')} />
   </AbsoluteFill>
 );

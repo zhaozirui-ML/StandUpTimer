@@ -6,9 +6,9 @@
 
 ```sh
 pnpm install
-pnpm sfx       # 按时间轴合成音效 → public/sfx/soundtrack.wav
+pnpm audio     # 按时间轴合成配乐和音效 → public/sfx/（约 30 秒）
 pnpm studio    # 浏览器里实时预览，可拖时间轴逐帧看
-pnpm render    # 合成音效并导出三种比例到 out/
+pnpm render    # 合成音频并导出三种比例到 out/
 pnpm typecheck
 ```
 
@@ -16,11 +16,14 @@ pnpm typecheck
 
 ## 结构
 
-- `src/timeline.json`：全片的时间点，画面和音效共用这一份，改节奏只改这里
+- `src/timeline.json`：全片的时间点，画面和音频共用这一份；关键动作都对齐在 120 BPM 的小节线上
 - `src/theme.ts`：颜色和字体 token，全部取自 App 图标
 - `src/components/Glyph.tsx`：图标字形，每一笔都能单独动画（椅子、身体、箭头、头、贴纸白边）
 - `src/scenes/`：四个场景，按出场顺序为 Intro → Sunrise → Features → Outro
-- `scripts/make-sfx.py`：只用 Python 标准库合成的音效，没有版权问题
+- `scripts/`：只用 Python 标准库合成的音频，没有版权问题
+  - `music.py`：配乐，暖色 Lo-fi，120 BPM，15 小节，乐谱按「小节, 拍」写
+  - `sfx.py`：画面节点上的音效
+  - `make-audio.py`：混音，输出 `soundtrack.wav`（成片用）和 `music.wav`、`sfx.wav` 两条分轨
 
 ## 分镜
 

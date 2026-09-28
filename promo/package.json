@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "studio": "remotion studio",
-    "sfx": "python3 scripts/make-sfx.py",
-    "render": "pnpm sfx && pnpm render:landscape && pnpm render:square && pnpm render:portrait",
+    "audio": "python3 scripts/make-audio.py",
+    "render": "pnpm audio && pnpm render:landscape && pnpm render:square && pnpm render:portrait",
     "render:landscape": "remotion render Landscape out/StandUpTimer-16x9.mp4",
     "render:square": "remotion render Square out/StandUpTimer-1x1.mp4",
     "render:portrait": "remotion render Portrait out/StandUpTimer-9x16.mp4",

@@ -3,3 +3,5 @@ node_modules/
 out/
 # 音效由 scripts/make-sfx.py 生成（pnpm sfx）
 public/sfx/*.wav
+# Python 运行时生成的缓存
+__pycache__/
