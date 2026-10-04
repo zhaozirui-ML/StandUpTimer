@@ -14,16 +14,24 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("时间设置（下一阶段生效）") {
-                Stepper("工作时长：\(workMinutes) 分钟", value: $workMinutes, in: 1...120)
-                Stepper("站立休息：\(shortBreakMinutes) 分钟", value: $shortBreakMinutes, in: 1...30)
-                Stepper("长休息：\(longBreakMinutes) 分钟", value: $longBreakMinutes, in: 5...60, step: 5)
-                Stepper("每 \(longBreakEvery) 个番茄后长休息", value: $longBreakEvery, in: 2...8)
+            Section {
+                stepperRow("工作时长", value: $workMinutes, in: 1...120,
+                           display: "\(workMinutes) 分钟")
+                stepperRow("站立休息", value: $shortBreakMinutes, in: 1...30,
+                           display: "\(shortBreakMinutes) 分钟")
+                stepperRow("长休息", value: $longBreakMinutes, in: 5...60, step: 5,
+                           display: "\(longBreakMinutes) 分钟")
+                stepperRow("长休息间隔", value: $longBreakEvery, in: 2...8,
+                           display: "每 \(longBreakEvery) 个番茄")
+            } header: {
+                Text("时间设置")
+            } footer: {
+                Text("修改在下一阶段开始时生效")
             }
 
             Section("提示音") {
                 Toggle("休息开始/结束时播放提示音", isOn: $soundEnabled)
-                Picker("提示音", selection: $soundName) {
+                Picker("声音", selection: $soundName) {
                     ForEach(sounds, id: \.self) { Text($0).tag($0) }
                 }
                 .disabled(!soundEnabled)
@@ -58,6 +66,18 @@ struct SettingsView: View {
         .fixedSize()
         .onChange(of: soundName) { _, _ in
             if soundEnabled { NSSound(named: soundName)?.play() }
+        }
+    }
+
+    /// macOS 惯例：左侧只放名称，数值和 Stepper 一起靠右；数值用等宽数字，增减时宽度不跳
+    private func stepperRow(_ title: String, value: Binding<Int>, in range: ClosedRange<Int>,
+                            step: Int = 1, display: String) -> some View {
+        LabeledContent(title) {
+            HStack(spacing: 4) {
+                Text(display).monospacedDigit()
+                // 标签隐藏但保留，供 VoiceOver 读出
+                Stepper(title, value: value, in: range, step: step).labelsHidden()
+            }
         }
     }
 }
