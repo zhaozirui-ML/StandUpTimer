@@ -18,7 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         stats = StatsStore()
         sound = SoundPlayer(settings: settings)
         engine = TimerEngine(settings: settings)
-        // 只在休息阶段响应，避免点击与 Esc 同时触发时连跳两个阶段
+        // 只在休息阶段响应，避免重复触发时连跳两个阶段
         overlay = OverlayController(
             skip: { [weak self] in
                 guard let self, self.engine.phase.isBreak else { return }
@@ -45,7 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func handleTransition(from: Phase, to: Phase) {
         if to.isBreak {
             sound.play()
-            overlay.show(isLongBreak: to == .longBreak)
+            overlay.show(isLongBreak: to == .longBreak, total: engine.displayRemaining)
             overlay.update(remaining: engine.displayRemaining)
         } else if from.isBreak {
             if to == .working { sound.play() }

@@ -20,7 +20,8 @@ macOS 菜单栏番茄钟 + 站立提醒工具。Swift 6 + AppKit，SwiftUI 只�
 |---|---|
 | `TimerEngine.swift` | 计时状态机（Phase：工作 / 短休 / 长休），基于墙钟 `phaseEndDate`，发出 `TimerEvent` |
 | `StatusItemController.swift` | 菜单栏图标、倒计时文字、下拉菜单 |
-| `OverlayController.swift` + `Views/OverlayView.swift` | 休息时每块屏幕一个全屏遮罩窗口 |
+| `OverlayController.swift` + `Views/OverlayView.swift` | 休息时每块屏幕一个全屏「日出」遮罩窗口；长按 Esc 1 秒跳过 |
+| `Views/StandGlyph.swift` | 图标里的「椅子 + 箭头小人」字形，坐标取自 `AppIcon.svg`，每笔可单独动画 |
 | `Views/SettingsView.swift` | 设置窗口 |
 | `SettingsStore.swift` | 设置读写，key 集中在 `SettingsKeys`，存在 `UserDefaults.standard` |
 | `StatsStore.swift` | 每日统计，写入 `~/Library/Application Support/StandUpTimer/stats.json` |
@@ -38,7 +39,7 @@ macOS 菜单栏番茄钟 + 站立提醒工具。Swift 6 + AppKit，SwiftUI 只�
 
 ## UI 样式
 
-项目没有 design token 系统。遮罩的字号、透明度、间距直接写在 `OverlayView.swift` 里，设置窗口用系统默认样式。需要新值时先说明缺少 token，不要自己发明一套数值。
+项目没有 design token 系统。遮罩的颜色集中在 `OverlayView.swift` 顶部的 `SunrisePalette`（取自 `AppIcon.svg` 和产品短片）；字号、间距以 1920×1080 为基准按屏幕等比缩放，也写在 `OverlayView.swift` 里。设置窗口用系统默认样式。需要新值时先说明缺少 token，不要自己发明一套数值。
 
 ## 发版流程
 
