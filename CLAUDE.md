@@ -55,4 +55,4 @@ macOS 菜单栏番茄钟 + 站立提醒工具。Swift 6 + AppKit，SwiftUI 只�
 
 ## 本地文件
 
-`StandUpTimer.bundle` 和 `StandUpTimer-个人电脑操作步骤.md` 是本地文件，已写进 `.git/info/exclude`（只在本机生效），不要提交。
+`StandUpTimer.bundle`、`StandUpTimer-个人电脑操作步骤.md` 和 `promo/` 是本地文件，已写进 `.git/info/exclude`（只在本机生效），不要提交。`promo/` 是宣传短片的 Remotion 项目，有自己独立的本地 git 仓库（不推送），在它里面提交即可。
