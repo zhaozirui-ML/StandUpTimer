@@ -9,7 +9,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     var onOpenSettings: (() -> Void)?
 
     private let menu = NSMenu()
-    private let stateItem = NSMenuItem()
     private let todayItem = NSMenuItem()
     private let startItem = NSMenuItem()
     private let pauseItem = NSMenuItem()
@@ -57,7 +56,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         menu.delegate = self
         menu.autoenablesItems = false
 
-        stateItem.isEnabled = false
         todayItem.isEnabled = false
 
         startItem.target = self
@@ -84,7 +82,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         let quitItem = NSMenuItem(title: "退出 StandUpTimer", action: #selector(quitTapped), keyEquivalent: "q")
         quitItem.target = self
 
-        menu.addItem(stateItem)
         menu.addItem(todayItem)
         menu.addItem(.separator())
         menu.addItem(startItem)
@@ -106,18 +103,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         for item in [pauseItem, skipItem, resetItem, stopItem] { item.isHidden = isIdle }
         pauseItem.title = engine.isPaused ? "继续" : "暂停"
 
-        // 状态行只写阶段；番茄数统一看下面的「今日」统计
-        switch engine.phase {
-        case .idle:
-            stateItem.title = "未开始"
-        case .working:
-            stateItem.title = "工作中"
-            skipItem.title = "立即休息"
-        case .shortBreak, .longBreak:
-            stateItem.title = engine.phase == .longBreak ? "长休息中" : "站立休息中"
-            skipItem.title = "跳过休息"
-        }
-        if engine.isPaused { stateItem.title += " · 已暂停" }
+        // 不单独显示状态行：阶段看菜单栏图标，暂停看图标变灰和「继续」
+        skipItem.title = engine.phase == .working ? "立即休息" : "跳过休息"
     }
 
     @objc private func startTapped() { engine.startWork() }
