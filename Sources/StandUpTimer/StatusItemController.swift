@@ -5,7 +5,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let statusItem: NSStatusItem
     private let engine: TimerEngine
     private let stats: StatsStore
-    private let settings: SettingsStore
 
     var onOpenSettings: (() -> Void)?
 
@@ -15,16 +14,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let startItem = NSMenuItem()
     private let pauseItem = NSMenuItem()
     private let skipItem = NSMenuItem()
-    private let postponeItem = NSMenuItem()
     private let resetItem = NSMenuItem()
     private let stopItem = NSMenuItem()
-    private let breakDurationItem = NSMenuItem()
-    private let breakDurationMenu = NSMenu()
 
-    init(engine: TimerEngine, stats: StatsStore, settings: SettingsStore) {
+    init(engine: TimerEngine, stats: StatsStore) {
         self.engine = engine
         self.stats = stats
-        self.settings = settings
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
         buildMenu()
@@ -75,20 +70,13 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         skipItem.target = self
         skipItem.action = #selector(skipTapped)
 
-        postponeItem.target = self
-        postponeItem.action = #selector(postponeTapped)
-        postponeItem.title = "推迟休息 5 分钟"
-
         resetItem.target = self
         resetItem.action = #selector(resetTapped)
-        resetItem.title = "重置当前倒计时"
+        resetItem.title = "重新计时"
 
         stopItem.target = self
         stopItem.action = #selector(stopTapped)
         stopItem.title = "停止计时"
-
-        breakDurationItem.title = "站立休息时长"
-        breakDurationItem.submenu = breakDurationMenu
 
         let settingsItem = NSMenuItem(title: "设置…", action: #selector(settingsTapped), keyEquivalent: ",")
         settingsItem.target = self
@@ -102,74 +90,40 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         menu.addItem(startItem)
         menu.addItem(pauseItem)
         menu.addItem(skipItem)
-        menu.addItem(postponeItem)
         menu.addItem(resetItem)
         menu.addItem(stopItem)
         menu.addItem(.separator())
-        menu.addItem(breakDurationItem)
         menu.addItem(settingsItem)
-        menu.addItem(.separator())
         menu.addItem(quitItem)
     }
 
     func menuWillOpen(_ menu: NSMenu) {
         let today = stats.today
-        todayItem.title = "今日：\(today.pomodorosCompleted) 番茄 · \(today.breaksTaken) 次站立"
-        rebuildBreakDurationMenu()
+        todayItem.title = "今日 \(today.pomodorosCompleted) 番茄 · \(today.breaksTaken) 次站立"
 
+        let isIdle = engine.phase == .idle
+        startItem.isHidden = !isIdle
+        for item in [pauseItem, skipItem, resetItem, stopItem] { item.isHidden = isIdle }
+        pauseItem.title = engine.isPaused ? "继续" : "暂停"
+
+        // 状态行只写阶段；番茄数统一看下面的「今日」统计
         switch engine.phase {
         case .idle:
             stateItem.title = "未开始"
-            startItem.isHidden = false
-            pauseItem.isHidden = true
-            skipItem.isHidden = true
-            postponeItem.isHidden = true
-            resetItem.isHidden = true
-            stopItem.isHidden = true
         case .working:
-            stateItem.title = engine.isPaused
-                ? "已暂停 · 工作中"
-                : "工作中 · 已完成 \(engine.completedPomodoros) 个番茄"
-            startItem.isHidden = true
-            pauseItem.isHidden = false
-            pauseItem.title = engine.isPaused ? "继续" : "暂停"
-            skipItem.isHidden = false
-            skipItem.title = "跳过：立即休息"
-            postponeItem.isHidden = false
-            resetItem.isHidden = false
-            stopItem.isHidden = false
+            stateItem.title = "工作中"
+            skipItem.title = "立即休息"
         case .shortBreak, .longBreak:
             stateItem.title = engine.phase == .longBreak ? "长休息中" : "站立休息中"
-            startItem.isHidden = true
-            pauseItem.isHidden = false
-            pauseItem.title = engine.isPaused ? "继续" : "暂停"
-            skipItem.isHidden = false
             skipItem.title = "跳过休息"
-            postponeItem.isHidden = false
-            resetItem.isHidden = false
-            stopItem.isHidden = false
         }
-    }
-
-    /// 快捷调整站立休息时长，勾选当前值（改动下一次休息生效）
-    private func rebuildBreakDurationMenu() {
-        breakDurationMenu.removeAllItems()
-        let current = settings.shortBreakMinutes
-        for minutes in SettingsChoices.including(current, in: SettingsChoices.shortBreakMinutes) {
-            let item = NSMenuItem(title: "\(minutes) 分钟", action: #selector(breakDurationSelected(_:)), keyEquivalent: "")
-            item.target = self
-            item.tag = minutes
-            item.state = minutes == current ? .on : .off
-            breakDurationMenu.addItem(item)
-        }
+        if engine.isPaused { stateItem.title += " · 已暂停" }
     }
 
     @objc private func startTapped() { engine.startWork() }
     @objc private func pauseTapped() { engine.togglePause() }
     @objc private func skipTapped() { engine.skipPhase() }
-    @objc private func postponeTapped() { engine.postpone() }
     @objc private func resetTapped() { engine.resetPhase() }
-    @objc private func breakDurationSelected(_ sender: NSMenuItem) { settings.shortBreakMinutes = sender.tag }
     @objc private func stopTapped() { engine.stop() }
     @objc private func settingsTapped() { onOpenSettings?() }
     @objc private func quitTapped() { NSApp.terminate(nil) }

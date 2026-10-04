@@ -40,10 +40,7 @@ final class SettingsStore {
     }
 
     var workMinutes: Int { defaults.integer(forKey: SettingsKeys.workMinutes) }
-    var shortBreakMinutes: Int {
-        get { defaults.integer(forKey: SettingsKeys.shortBreakMinutes) }
-        set { defaults.set(newValue, forKey: SettingsKeys.shortBreakMinutes) }
-    }
+    var shortBreakMinutes: Int { defaults.integer(forKey: SettingsKeys.shortBreakMinutes) }
     var longBreakMinutes: Int { defaults.integer(forKey: SettingsKeys.longBreakMinutes) }
     var longBreakEvery: Int { max(1, defaults.integer(forKey: SettingsKeys.longBreakEvery)) }
     var soundEnabled: Bool { defaults.bool(forKey: SettingsKeys.soundEnabled) }

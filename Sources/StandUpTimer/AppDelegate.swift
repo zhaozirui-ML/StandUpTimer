@@ -29,7 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self.engine.postpone()
             }
         )
-        statusController = StatusItemController(engine: engine, stats: stats, settings: settings)
+        statusController = StatusItemController(engine: engine, stats: stats)
         statusController.onOpenSettings = { [weak self] in self?.openSettings() }
 
         engine.onChange = { [weak self] in self?.refresh() }
