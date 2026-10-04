@@ -20,7 +20,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let stopItem = NSMenuItem()
     private let breakDurationItem = NSMenuItem()
     private let breakDurationMenu = NSMenu()
-    private let breakDurationChoices = [3, 5, 8, 10, 15, 20]
 
     init(engine: TimerEngine, stats: StatsStore, settings: SettingsStore) {
         self.engine = engine
@@ -156,12 +155,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private func rebuildBreakDurationMenu() {
         breakDurationMenu.removeAllItems()
         let current = settings.shortBreakMinutes
-        var choices = breakDurationChoices
-        if !choices.contains(current) {
-            choices.append(current)
-            choices.sort()
-        }
-        for minutes in choices {
+        for minutes in SettingsChoices.including(current, in: SettingsChoices.shortBreakMinutes) {
             let item = NSMenuItem(title: "\(minutes) 分钟", action: #selector(breakDurationSelected(_:)), keyEquivalent: "")
             item.target = self
             item.tag = minutes

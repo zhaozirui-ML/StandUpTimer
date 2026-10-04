@@ -15,14 +15,14 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section {
-                stepperRow("工作时长", value: $workMinutes, in: 1...120,
-                           display: "\(workMinutes) 分钟")
-                stepperRow("站立休息", value: $shortBreakMinutes, in: 1...30,
-                           display: "\(shortBreakMinutes) 分钟")
-                stepperRow("长休息", value: $longBreakMinutes, in: 5...60, step: 5,
-                           display: "\(longBreakMinutes) 分钟")
-                stepperRow("长休息间隔", value: $longBreakEvery, in: 2...8,
-                           display: "每 \(longBreakEvery) 个番茄")
+                choicePicker("工作时长", selection: $workMinutes,
+                             choices: SettingsChoices.workMinutes) { "\($0) 分钟" }
+                choicePicker("站立休息", selection: $shortBreakMinutes,
+                             choices: SettingsChoices.shortBreakMinutes) { "\($0) 分钟" }
+                choicePicker("长休息", selection: $longBreakMinutes,
+                             choices: SettingsChoices.longBreakMinutes) { "\($0) 分钟" }
+                choicePicker("长休息间隔", selection: $longBreakEvery,
+                             choices: SettingsChoices.longBreakEvery) { "每 \($0) 个番茄" }
             } header: {
                 Text("时间设置")
             } footer: {
@@ -69,14 +69,12 @@ struct SettingsView: View {
         }
     }
 
-    /// macOS 惯例：左侧只放名称，数值和 Stepper 一起靠右；数值用等宽数字，增减时宽度不跳
-    private func stepperRow(_ title: String, value: Binding<Int>, in range: ClosedRange<Int>,
-                            step: Int = 1, display: String) -> some View {
-        LabeledContent(title) {
-            HStack(spacing: 4) {
-                Text(display).monospacedDigit()
-                // 标签隐藏但保留，供 VoiceOver 读出
-                Stepper(title, value: value, in: range, step: step).labelsHidden()
+    /// 预设值弹出菜单，和「声音」用同一种控件
+    private func choicePicker(_ title: String, selection: Binding<Int>, choices: [Int],
+                              label: @escaping (Int) -> String) -> some View {
+        Picker(title, selection: selection) {
+            ForEach(SettingsChoices.including(selection.wrappedValue, in: choices), id: \.self) {
+                Text(label($0)).tag($0)
             }
         }
     }
