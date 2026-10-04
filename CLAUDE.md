@@ -19,7 +19,8 @@ macOS 菜单栏番茄钟 + 站立提醒工具。Swift 6 + AppKit，SwiftUI 只�
 | 文件 | 职责 |
 |---|---|
 | `TimerEngine.swift` | 计时状态机（Phase：工作 / 短休 / 长休），基于墙钟 `phaseEndDate`，发出 `TimerEvent` |
-| `StatusItemController.swift` | 菜单栏图标、倒计时文字、下拉菜单 |
+| `StatusItemController.swift` | 菜单栏图标、倒计时文字（等宽数字）、下拉菜单 |
+| `MenuBarIcon.swift` | 菜单栏的单色 template 字形：工作中为椅子 + 小人，休息中只剩小人 |
 | `OverlayController.swift` + `Views/OverlayView.swift` | 休息时每块屏幕一个全屏「日出」遮罩窗口；长按 Esc 1 秒跳过 |
 | `Views/StandGlyph.swift` | 图标里的「椅子 + 箭头小人」字形，坐标取自 `AppIcon.svg`，每笔可单独动画 |
 | `Views/SettingsView.swift` | 设置窗口 |

@@ -35,17 +35,22 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     func refresh() {
         guard let button = statusItem.button else { return }
+        // 等宽数字：倒计时每秒变化时宽度不变，不会推动菜单栏里的其他图标
+        button.font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+        button.imagePosition = .imageLeft
+        // 暂停时用系统原生的禁用外观整体变灰
+        button.appearsDisabled = engine.isPaused
         switch engine.phase {
         case .idle:
+            button.image = MenuBarIcon.full
             button.title = ""
-            button.image = NSImage(systemSymbolName: "timer", accessibilityDescription: "StandUpTimer")
-            button.image?.isTemplate = true
         case .working:
-            button.image = nil
-            button.title = (engine.isPaused ? "⏸ " : "🍅 ") + timeString(engine.displayRemaining)
+            button.image = MenuBarIcon.full
+            button.title = " " + timeString(engine.displayRemaining)
         case .shortBreak, .longBreak:
-            button.image = nil
-            button.title = (engine.isPaused ? "⏸ " : "🧘 ") + timeString(engine.displayRemaining)
+            // 休息时只剩站着的小人：现在是站立时间
+            button.image = MenuBarIcon.standing
+            button.title = " " + timeString(engine.displayRemaining)
         }
     }
 
