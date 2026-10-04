@@ -38,3 +38,7 @@ make clean
 - 遮罩为每屏一个 `.screenSaver` 层级的无边框窗口，`canJoinAllSpaces + fullScreenAuxiliary` 覆盖全屏应用；不激活 App 以免打乱下层窗口
 - 开机自启动用 `SMAppService.mainApp`，每次启动按用户偏好幂等重注册（应对重新构建后注册失效）
 - Swift 6 严格并发：所有控制器 `@MainActor`，Timer/通知回调用 `MainActor.assumeIsolated`
+
+## 许可证
+
+[MIT](LICENSE)
