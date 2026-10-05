@@ -2,8 +2,9 @@ import AppKit
 import SwiftUI
 
 /// 无边框窗口默认拒绝成为 key window，按钮将不可点击，因此需要子类放开。
+/// 用 NSPanel + .nonactivatingPanel：App 不激活也能接收键盘，否则 Esc 会落到下层 App，需要先点一下遮罩才生效。
 /// Esc 在窗口层捕获（比 SwiftUI onExitCommand 更可靠），按下和松开分开上报，用来实现长按。
-final class OverlayWindow: NSWindow {
+final class OverlayWindow: NSPanel {
     var onEscapeDown: (() -> Void)?
     var onEscapeUp: (() -> Void)?
 
@@ -77,11 +78,14 @@ final class OverlayController {
         for screen in NSScreen.screens {
             let window = OverlayWindow(
                 contentRect: screen.frame,
-                styleMask: [.borderless],
+                // .nonactivatingPanel 必须在初始化时传入，事后再改 styleMask 不会生效
+                styleMask: [.borderless, .nonactivatingPanel],
                 backing: .buffered,
                 defer: false,
                 screen: screen
             )
+            // NSPanel 默认在 App 失去激活时自动隐藏，遮罩不能这样
+            window.hidesOnDeactivate = false
             window.level = .screenSaver
             window.isOpaque = false
             window.backgroundColor = .clear
