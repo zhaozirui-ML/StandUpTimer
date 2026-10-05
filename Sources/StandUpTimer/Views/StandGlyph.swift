@@ -15,6 +15,8 @@ struct StandGlyph: View {
     var warmth: Double = 1
     /// 椅子被推开时向后仰的角度
     var tilt: Double = 0
+    /// 贴纸描边的投影色。直接放在夜色上用更深的夜色；放在浅粉底板上用图标原版的粉紫投影
+    var shadowColor: Color = SunrisePalette.night.opacity(0.55)
 
     private static let canvas: CGFloat = 1024
     private static let line: CGFloat = 76
@@ -24,13 +26,12 @@ struct StandGlyph: View {
 
     var body: some View {
         ZStack {
-            // 白色贴纸描边 + 投影。图标原版的粉紫投影是给浅色底板用的，
-            // 放在夜色背景上会变成一圈浅色光晕，这里改用比背景更深的夜色
+            // 白色贴纸描边 + 投影（颜色见 shadowColor）
             // compositingGroup：先把各笔画合成一个整体，再投影和调透明度，
             // 否则笔画重叠处（椅子转角）会出现两层叠加的色块
             strokes(paint: AnyShapeStyle(Color.white), width: Self.outline)
                 .compositingGroup()
-                .shadow(color: SunrisePalette.night.opacity(0.55), radius: 16 * scale, y: 14 * scale)
+                .shadow(color: shadowColor, radius: 16 * scale, y: 14 * scale)
             // 冷色底层，渐变层随 warmth 淡入，实现由冷转暖
             strokes(paint: AnyShapeStyle(SunrisePalette.cold), width: Self.line)
             strokes(paint: AnyShapeStyle(gradient), width: Self.line)
