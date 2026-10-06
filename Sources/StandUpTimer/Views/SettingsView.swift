@@ -8,7 +8,9 @@ struct SettingsView: View {
     @AppStorage(SettingsKeys.soundEnabled) private var soundEnabled = true
     @AppStorage(SettingsKeys.soundName) private var soundName = "Glass"
     @AppStorage(SettingsKeys.launchAtLogin) private var launchAtLogin = false
+    @AppStorage(SettingsKeys.breakTheme) private var breakTheme: BreakThemeChoice = .auto
 
+    @Environment(\.colorScheme) private var colorScheme
     @State private var loginItemError: String?
     private let sounds = SoundPlayer.availableSounds()
 
@@ -27,6 +29,23 @@ struct SettingsView: View {
                 Text("时间设置")
             } footer: {
                 Text("修改在下一阶段开始时生效")
+            }
+
+            // 画面（视觉）和提示音（听觉）挨着放，都属于休息时的感受
+            Section {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 12) {
+                    ForEach(BreakThemeChoice.allCases, id: \.self) { choice in
+                        ThemeTile(choice: choice, isSelected: breakTheme == choice) { breakTheme = choice }
+                    }
+                }
+                .padding(.vertical, 4)
+            } header: {
+                Text("休息画面")
+            } footer: {
+                // 每分钟刷新一次：设置窗口一直开着时，跨过时段边界说明也不会过期
+                TimelineView(.everyMinute) { context in
+                    Text(themeFooter(at: context.date))
+                }
             }
 
             Section("提示音") {
@@ -66,6 +85,22 @@ struct SettingsView: View {
         .fixedSize()
         .onChange(of: soundName) { _, _ in
             if soundEnabled { NSSound(named: soundName)?.play() }
+        }
+    }
+
+    /// 「休息画面」的说明：自动模式写清「为什么现在是这套」
+    private func themeFooter(at date: Date) -> String {
+        switch breakTheme {
+        case .fixed:
+            return "每次休息都显示「\(breakTheme.title)」。修改在下一次休息时生效"
+        case .auto:
+            let isDark = colorScheme == .dark
+            let period = BreakThemeChoice.periodNames[BreakThemeChoice.periodIndex(at: date)]
+            let current = BreakTheme.named(BreakThemeChoice.autoTheme(at: date, isDark: isDark)).name
+            return """
+                现在是\(period)（\(isDark ? "深色" : "浅色")外观），休息时显示「\(current)」。
+                上午晨雾、下午莫兰迪、傍晚睡莲、夜里日出；系统为深色外观时，上午换成蓝调、下午换成林荫。修改在下一次休息时生效
+                """
         }
     }
 

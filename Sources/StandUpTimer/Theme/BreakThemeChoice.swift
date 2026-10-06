@@ -34,14 +34,50 @@ enum BreakThemeChoice: Hashable, Sendable, RawRepresentable, CaseIterable {
     }
 
     /// 自动规则：按时段换，上午、下午、傍晚、夜里各一套；
-    /// 系统是深色外观时，白天也只用深色主题，避免整屏浅色晃眼。
-    /// 浅色从 07:00 开始，冬天 6 点多天还没亮
+    /// 系统是深色外观时，白天也只用深色主题，避免整屏浅色晃眼
     static func autoTheme(at date: Date, isDark: Bool) -> BreakThemeID {
+        autoSequence(isDark: isDark)[periodIndex(at: date)]
+    }
+
+    /// 自动模式一天里的 4 套主题，顺序对应 periodNames
+    static func autoSequence(isDark: Bool) -> [BreakThemeID] {
+        isDark ? [.blueHour, .forest, .waterLily, .sunrise] : [.mist, .morandi, .waterLily, .sunrise]
+    }
+
+    static let periodNames = ["上午", "下午", "傍晚", "夜里"]
+
+    /// 时段：07–12 上午、12–17 下午、17–20 傍晚、其余夜里。浅色从 07:00 开始，冬天 6 点多天还没亮
+    static func periodIndex(at date: Date) -> Int {
         switch Calendar.current.component(.hour, from: date) {
-        case 7..<12: isDark ? .blueHour : .mist
-        case 12..<17: isDark ? .forest : .morandi
-        case 17..<20: .waterLily
-        default: .sunrise
+        case 7..<12: 0
+        case 12..<17: 1
+        case 17..<20: 2
+        default: 3
+        }
+    }
+
+    /// 设置里显示的名字
+    var title: String {
+        switch self {
+        case .auto: "自动"
+        case .fixed(let id): BreakTheme.named(id).name
+        }
+    }
+
+    /// 设置里悬停时的说明：这套主题在自动模式下负责哪个时段
+    var helpText: String {
+        switch self {
+        case .auto:
+            return "按时段自动切换：上午、下午、傍晚、夜里各一套"
+        case .fixed(let id):
+            let light = Self.autoSequence(isDark: false).firstIndex(of: id)
+            let dark = Self.autoSequence(isDark: true).firstIndex(of: id)
+            switch (light, dark) {
+            case let (l?, d?) where l == d: return "自动模式下：\(Self.periodNames[l])"
+            case let (l?, _): return "自动模式下：\(Self.periodNames[l])，浅色外观"
+            case let (_, d?): return "自动模式下：\(Self.periodNames[d])，深色外观"
+            default: return ""
+            }
         }
     }
 
