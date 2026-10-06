@@ -35,6 +35,8 @@ final class OverlayModel: ObservableObject {
     @Published var skipProgress: Double = 0
     /// 本次休息的画面主题，休息开始时确定
     @Published var theme = BreakTheme.sunrise
+    /// 设置里的「预览」：按 Esc 直接退出，不需要长按
+    @Published var isPreview = false
 
     var progress: Double {
         guard total > 0 else { return 0 }
@@ -129,7 +131,7 @@ struct OverlayView: View {
                 // 遮罩窗口是 key window，按钮会默认画出系统焦点环
                 .focusEffectDisabled()
 
-                SkipHint(theme: theme, progress: model.skipProgress, scale: s)
+                SkipHint(theme: theme, progress: model.skipProgress, isPreview: model.isPreview, scale: s)
             }
             .frame(height: 60 * s)
             .offset(x: 1040 * s, y: 754 * s)
@@ -215,7 +217,13 @@ private struct GhostPillStyle: ButtonStyle {
 private struct SkipHint: View {
     var theme: BreakTheme
     var progress: Double
+    var isPreview: Bool
     var scale: CGFloat
+
+    private var label: String {
+        if isPreview { return "退出预览" }
+        return progress > 0 ? "继续按住…" : "长按跳过"
+    }
 
     var body: some View {
         HStack(spacing: 12 * scale) {
@@ -234,7 +242,7 @@ private struct SkipHint: View {
                         .strokeBorder(theme.primary.opacity(FlowMotion.strokeOpacity), lineWidth: 1.5)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 6 * scale))
-            Text(progress > 0 ? "继续按住…" : "长按跳过")
+            Text(label)
                 .font(.system(size: 22 * scale))
                 .foregroundStyle(theme.primary)
         }

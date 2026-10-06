@@ -7,8 +7,19 @@ import SwiftUI
 final class OverlayWindow: NSPanel {
     var onEscapeDown: (() -> Void)?
     var onEscapeUp: (() -> Void)?
+    /// 预览模式下点击任意处退出
+    var onClick: (() -> Void)?
 
     override var canBecomeKey: Bool { true }
+
+    /// 在事件分发给按钮之前截住点击，预览时「推迟」按钮也只当作退出
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .leftMouseDown, let onClick {
+            onClick()
+            return
+        }
+        super.sendEvent(event)
+    }
 
     override func keyDown(with event: NSEvent) {
         if event.keyCode == 53 { // Esc
@@ -43,6 +54,10 @@ final class OverlayController {
     private let holdDuration: TimeInterval = 1
     private var holdStart: Date?
     private var holdTimer: Timer?
+    /// 设置里的「预览」：不经过 TimerEngine，由这里自己驱动进度
+    private(set) var isPreviewing = false
+    private var previewTimer: Timer?
+    private static let previewDuration: TimeInterval = 8
 
     var isVisible: Bool { !windows.isEmpty }
 
@@ -52,6 +67,59 @@ final class OverlayController {
     }
 
     func show(isLongBreak: Bool, total: TimeInterval, theme id: BreakThemeID) {
+        // 真正的休息开始时，正在播放的预览直接让位。预览画面已经铺满屏幕，
+        // 这时原地替换不再淡入，否则会先露出一下桌面再淡回来
+        let replacingPreview = isPreviewing
+        stopPreview()
+        present(theme: id, isLongBreak: isLongBreak, total: total, screens: NSScreen.screens,
+                isPreview: false, fadeIn: !replacingPreview)
+    }
+
+    /// 设置里的「预览」：在鼠标所在的屏幕全屏播放 8 秒，进度从 0 走到 1，流动按真实速度。
+    /// 按 Esc 或点击任意处退出。不经过 TimerEngine，不记统计；正在休息时不预览
+    func preview(theme id: BreakThemeID) {
+        guard !isVisible else { return }
+        let mouse = NSEvent.mouseLocation
+        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(mouse) }) ?? NSScreen.main else { return }
+
+        let total: TimeInterval = 300
+        isPreviewing = true
+        present(theme: id, isLongBreak: false, total: total, screens: [screen], isPreview: true, fadeIn: true)
+        let shownAt = Date()
+        for window in windows {
+            window.onEscapeDown = { [weak self] in self?.hide() }
+            window.onEscapeUp = nil
+            // 淡入的 0.5 秒内不响应点击：双击「预览」时第二下会落在刚弹出的画面上，不能让它直接退出
+            window.onClick = { [weak self] in
+                guard Date().timeIntervalSince(shownAt) > 0.5 else { return }
+                self?.hide()
+            }
+        }
+
+        let start = Date()
+        setRemaining(total)
+        let timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                let k = min(1, Date().timeIntervalSince(start) / Self.previewDuration)
+                self.setRemaining(total * (1 - k))
+                if k >= 1 { self.hide() }
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        previewTimer = timer
+    }
+
+    private func stopPreview() {
+        previewTimer?.invalidate()
+        previewTimer = nil
+        isPreviewing = false
+    }
+
+    private func present(
+        theme id: BreakThemeID, isLongBreak: Bool, total: TimeInterval,
+        screens: [NSScreen], isPreview: Bool, fadeIn: Bool
+    ) {
         // 上一次的淡出还没结束就直接收掉，立即重建
         finishFadeOut()
 
@@ -61,15 +129,22 @@ final class OverlayController {
         scene = BackdropScene.random(theme: theme)
         model.theme = theme
         model.isLongBreak = isLongBreak
+        model.isPreview = isPreview
         model.total = total
         model.skipProgress = 0
 
         clock.start()
-        buildWindows(fadeIn: true)
+        buildWindows(fadeIn: fadeIn, screens: screens)
         observeScreenChanges()
     }
 
+    /// 由 AppDelegate 每次计时刷新时调用；预览期间由预览自己驱动，忽略计时器
     func update(remaining: TimeInterval) {
+        guard !isPreviewing else { return }
+        setRemaining(remaining)
+    }
+
+    private func setRemaining(_ remaining: TimeInterval) {
         model.remaining = remaining
         clock.setProgress(model.progress)
     }
@@ -78,6 +153,7 @@ final class OverlayController {
     func hide() {
         // 只停计时器、保留长按进度：长按跳过成功后，淡出画面停在「已填满」的状态
         stopHoldTimer()
+        stopPreview()
         if let observer = screenObserver {
             NotificationCenter.default.removeObserver(observer)
             screenObserver = nil
@@ -92,6 +168,7 @@ final class OverlayController {
             // 重复点「推迟」由 AppDelegate 里的 isBreak 检查挡住
             window.onEscapeDown = nil
             window.onEscapeUp = nil
+            window.onClick = nil
         }
         fadingWindows += closing
         NSAnimationContext.runAnimationGroup({ context in
@@ -108,12 +185,12 @@ final class OverlayController {
         fadingWindows = []
     }
 
-    private func buildWindows(fadeIn: Bool) {
+    private func buildWindows(fadeIn: Bool, screens: [NSScreen]) {
         guard let scene else { return }
         for window in windows { window.orderOut(nil) }
         windows = []
 
-        for screen in NSScreen.screens {
+        for screen in screens {
             let window = OverlayWindow(
                 contentRect: screen.frame,
                 // .nonactivatingPanel 必须在初始化时传入，事后再改 styleMask 不会生效
@@ -209,7 +286,12 @@ final class OverlayController {
         ) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, self.isVisible else { return }
-                self.buildWindows(fadeIn: false)
+                // 预览只在一块屏幕上，屏幕变化时直接结束预览
+                if self.isPreviewing {
+                    self.hide()
+                } else {
+                    self.buildWindows(fadeIn: false, screens: NSScreen.screens)
+                }
             }
         }
     }

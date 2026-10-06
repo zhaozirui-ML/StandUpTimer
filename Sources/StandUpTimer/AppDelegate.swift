@@ -65,7 +65,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func openSettings() {
         if settingsWindow == nil {
-            let host = NSHostingController(rootView: SettingsView())
+            let host = NSHostingController(rootView: SettingsView(onPreview: { [weak self] theme in
+                self?.overlay.preview(theme: theme)
+            }))
             let window = NSWindow(contentViewController: host)
             window.title = "StandUpTimer 设置"
             window.styleMask = [.titled, .closable, .miniaturizable]

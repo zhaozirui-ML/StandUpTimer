@@ -8,6 +8,7 @@ struct ThemeTile: View {
     let action: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         Button(action: action) {
@@ -38,7 +39,11 @@ struct ThemeTile: View {
     private var thumbnail: some View {
         switch choice {
         case .fixed(let id):
-            ThemeThumbnail(theme: BreakTheme.named(id))
+            // 和休息时一样套用「增强对比度」；切换后重建缩略图（scene 是创建时定的）
+            ThemeThumbnail(theme: BreakTheme.named(id).adjusted(increaseContrast: contrast == .increased))
+                .id(contrast)
+                // 内嵌的是真实 NSView，不让它截走点击和悬停，整格都交给外层按钮
+                .allowsHitTesting(false)
         case .auto:
             // 4 条竖向色带，依次是上午、下午、傍晚、夜里，随系统外观变化
             HStack(spacing: 0) {

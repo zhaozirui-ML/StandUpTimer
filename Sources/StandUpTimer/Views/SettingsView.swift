@@ -10,6 +10,9 @@ struct SettingsView: View {
     @AppStorage(SettingsKeys.launchAtLogin) private var launchAtLogin = false
     @AppStorage(SettingsKeys.breakTheme) private var breakTheme: BreakThemeChoice = .auto
 
+    /// 「预览」按钮：传入此刻会用到的主题，由 AppDelegate 交给遮罩全屏试播
+    var onPreview: (BreakThemeID) -> Void = { _ in }
+
     @Environment(\.colorScheme) private var colorScheme
     @State private var loginItemError: String?
     private let sounds = SoundPlayer.availableSounds()
@@ -39,6 +42,15 @@ struct SettingsView: View {
                     }
                 }
                 .padding(.vertical, 4)
+                // 缩略图看不出流动和整屏亮度，预览是选主题前唯一能「试穿」的办法
+                HStack {
+                    Text("全屏试播 8 秒，按 esc 或点击退出")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("预览") {
+                        onPreview(breakTheme.resolve(at: Date(), isDark: colorScheme == .dark))
+                    }
+                }
             } header: {
                 Text("休息画面")
             } footer: {
@@ -95,11 +107,20 @@ struct SettingsView: View {
             return "每次休息都显示「\(breakTheme.title)」。修改在下一次休息时生效"
         case .auto:
             let isDark = colorScheme == .dark
-            let period = BreakThemeChoice.periodNames[BreakThemeChoice.periodIndex(at: date)]
+            let names = BreakThemeChoice.periodNames
+            let period = names[BreakThemeChoice.periodIndex(at: date)]
             let current = BreakTheme.named(BreakThemeChoice.autoTheme(at: date, isDark: isDark)).name
+            // 规则说明从同一张时段表生成：浅色外观逐个列出，深色外观只列出不同的时段
+            let light = BreakThemeChoice.autoSequence(isDark: false)
+            let dark = BreakThemeChoice.autoSequence(isDark: true)
+            let lightText = zip(names, light).map { "\($0)\(BreakTheme.named($1).name)" }.joined(separator: "、")
+            let darkText = zip(names, zip(light, dark))
+                .filter { $1.0 != $1.1 }
+                .map { "\($0)换成\(BreakTheme.named($1.1).name)" }
+                .joined(separator: "、")
             return """
                 现在是\(period)（\(isDark ? "深色" : "浅色")外观），休息时显示「\(current)」。
-                上午晨雾、下午莫兰迪、傍晚睡莲、夜里日出；系统为深色外观时，上午换成蓝调、下午换成林荫。修改在下一次休息时生效
+                \(lightText)；系统为深色外观时，\(darkText)。修改在下一次休息时生效
                 """
         }
     }
