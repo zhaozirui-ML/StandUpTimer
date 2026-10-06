@@ -21,7 +21,12 @@ macOS 菜单栏番茄钟 + 站立提醒工具。Swift 6 + AppKit，SwiftUI 只�
 | `TimerEngine.swift` | 计时状态机（Phase：工作 / 短休 / 长休），基于墙钟 `phaseEndDate`，发出 `TimerEvent` |
 | `StatusItemController.swift` | 菜单栏图标、倒计时文字（等宽数字）、下拉菜单 |
 | `MenuBarIcon.swift` | 菜单栏的单色 template 字形：工作中为椅子 + 小人，休息中只剩小人 |
-| `OverlayController.swift` + `Views/OverlayView.swift` | 休息时每块屏幕一个全屏「日出」遮罩窗口；长按 Esc 1 秒跳过 |
+| `OverlayController.swift` | 休息时每块屏幕一个全屏遮罩窗口（流动背景 + 前景排版），淡入淡出；长按 Esc 1 秒跳过 |
+| `Views/OverlayView.swift` | 遮罩前景：左栏图标 + 文案，右栏倒计时 + 操作，按 1920×1080 舞台排版 |
+| `Views/FlowBackdropView.swift` | 遮罩背景：CAGradientLayer 层树（底色交叉淡化 + 3 个流动色块 + 光源），由 WindowServer 绘制 |
+| `BackdropClock.swift` | 背景的步进时钟和能耗分档：接电源 10Hz、电池 5Hz；减弱动态效果、低电量、过热、离座时定格；被遮住时暂停 |
+| `Theme/BreakTheme.swift` + `Theme/BreakThemes.swift` | 休息画面主题的数据结构、全系列共用的几何与运动（`FlowMotion`）、6 套主题色值 |
+| `Views/Stage.swift` | 1920×1080 舞台的缩放公式，排版和背景光源共用 |
 | `Views/StandGlyph.swift` | 图标里的「椅子 + 箭头小人」字形，坐标取自 `AppIcon.svg`，每笔可单独动画 |
 | `Views/SettingsView.swift` | 设置窗口 |
 | `SettingsStore.swift` | 设置读写，key 集中在 `SettingsKeys`，存在 `UserDefaults.standard` |
@@ -36,11 +41,12 @@ macOS 菜单栏番茄钟 + 站立提醒工具。Swift 6 + AppKit，SwiftUI 只�
 - 所有控制器都是 `@MainActor`，Timer / 通知回调里用 `MainActor.assumeIsolated`。
 - 剩余时间由 `phaseEndDate` 推算，1 Hz Timer 只负责刷新显示，不要改成逐秒累减（App Nap 会导致漂移）。
 - 遮罩窗口不激活 App，以免打乱用户下层的窗口焦点。
+- 流动背景由 `BackdropClock` 在主线程低频步进（每步一个 CATransaction），不要改成 Core Animation 自动动画或 TimelineView：那样 WindowServer 会按 60/120Hz 合成，耗电高出数倍。
 - 以下改动属于数据结构变更，动手前先确认：`SettingsKeys` 里的 key 名、`DayStats` 字段、stats.json 路径、Bundle ID（UserDefaults 和开机自启动登记都跟着它走）。
 
 ## UI 样式
 
-项目没有 design token 系统。遮罩的颜色集中在 `OverlayView.swift` 顶部的 `SunrisePalette`（取自 `AppIcon.svg` 和产品短片）；字号、间距以 1920×1080 为基准按屏幕等比缩放，也写在 `OverlayView.swift` 里。设置窗口用系统默认样式。需要新值时先说明缺少 token，不要自己发明一套数值。
+项目没有 design token 系统。休息画面的颜色按主题集中在 `Theme/BreakThemes.swift`（每个色值注释了出处，改色后要重新核对文字对比度）；图标本身的颜色在 `OverlayView.swift` 顶部的 `SunrisePalette`（取自 `AppIcon.svg`）。字号、间距以 1920×1080 为基准按屏幕等比缩放，写在 `OverlayView.swift` 里。设置窗口用系统默认样式。需要新值时先说明缺少 token，不要自己发明一套数值。
 
 ## 发版流程
 

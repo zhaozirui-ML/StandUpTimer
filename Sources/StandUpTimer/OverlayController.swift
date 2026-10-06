@@ -31,7 +31,11 @@ final class OverlayWindow: NSPanel {
 @MainActor
 final class OverlayController {
     private var windows: [OverlayWindow] = []
+    /// 正在淡出的窗口：已经不算「可见」，淡出结束后 orderOut
+    private var fadingWindows: [OverlayWindow] = []
     private let model = OverlayModel()
+    private let clock = BackdropClock()
+    private var scene: BackdropScene?
     private let skip: () -> Void
     private let postpone: () -> Void
     private var screenObserver: NSObjectProtocol?
@@ -48,30 +52,64 @@ final class OverlayController {
     }
 
     func show(isLongBreak: Bool, total: TimeInterval) {
+        // 上一次的淡出还没结束就直接收掉，立即重建
+        finishFadeOut()
+
+        let theme = BreakTheme.named(.sunrise)
+            .adjusted(increaseContrast: NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast)
+        // 主题和流动相位在休息开始时定一次，整段休息不变；多块屏幕共用
+        scene = BackdropScene.random(theme: theme)
+        model.theme = theme
         model.isLongBreak = isLongBreak
         model.total = total
         model.skipProgress = 0
-        buildWindows()
+
+        clock.start()
+        buildWindows(fadeIn: true)
         observeScreenChanges()
     }
 
     func update(remaining: TimeInterval) {
         model.remaining = remaining
+        clock.setProgress(model.progress)
     }
 
+    /// 0.35 秒淡出后收起，和进场的 0.5 秒淡入对称
     func hide() {
-        cancelHold()
+        // 只停计时器、保留长按进度：长按跳过成功后，淡出画面停在「已填满」的状态
+        stopHoldTimer()
         if let observer = screenObserver {
             NotificationCenter.default.removeObserver(observer)
             screenObserver = nil
         }
-        for window in windows {
-            window.orderOut(nil)
-        }
+        clock.stop()
+
+        let closing = windows
         windows = []
+        guard !closing.isEmpty else { return }
+        for window in closing {
+            // 淡出期间 Esc 不再触发跳过。点击照常由窗口接住，不会穿透到下层 App；
+            // 重复点「推迟」由 AppDelegate 里的 isBreak 检查挡住
+            window.onEscapeDown = nil
+            window.onEscapeUp = nil
+        }
+        fadingWindows += closing
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.35
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            for window in closing { window.animator().alphaValue = 0 }
+        }, completionHandler: { [weak self] in
+            MainActor.assumeIsolated { self?.finishFadeOut() }
+        })
     }
 
-    private func buildWindows() {
+    private func finishFadeOut() {
+        for window in fadingWindows { window.orderOut(nil) }
+        fadingWindows = []
+    }
+
+    private func buildWindows(fadeIn: Bool) {
+        guard let scene else { return }
         for window in windows { window.orderOut(nil) }
         windows = []
 
@@ -93,13 +131,35 @@ final class OverlayController {
             window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
             window.onEscapeDown = { [weak self] in self?.beginHold() }
             window.onEscapeUp = { [weak self] in self?.cancelHold() }
-            window.contentView = NSHostingView(
-                rootView: OverlayView(model: model, postpone: postpone)
-            )
+
+            // 背景在下（CALayer 层树，由 BackdropClock 步进），SwiftUI 排版在上（透明背景）
+            let size = screen.frame.size
+            let container = NSView(frame: CGRect(origin: .zero, size: size))
+            let backdrop = FlowBackdropView(scene: scene)
+            let host = NSHostingView(rootView: OverlayView(model: model, postpone: postpone))
+            for view in [backdrop, host] as [NSView] {
+                view.frame = container.bounds
+                view.autoresizingMask = [.width, .height]
+                container.addSubview(view)
+            }
+            window.contentView = container
             window.setFrame(screen.frame, display: true)
+            clock.register(backdrop)
+
+            // 淡入用窗口透明度，背景和文字一起进场。屏幕插拔重建时不再淡入
+            window.alphaValue = fadeIn ? 0 : 1
             // 不激活 App，避免打乱下层窗口/全屏 Space
             window.orderFrontRegardless()
             windows.append(window)
+        }
+
+        if fadeIn {
+            let fading = windows
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.5
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                for window in fading { window.animator().alphaValue = 1 }
+            }
         }
 
         // 只让鼠标所在屏幕的窗口成为 key，吞掉键盘输入（长按 Esc = 跳过休息）
@@ -123,16 +183,21 @@ final class OverlayController {
         let p = min(1, Date().timeIntervalSince(holdStart) / holdDuration)
         model.skipProgress = p
         if p >= 1 {
-            cancelHold()
+            stopHoldTimer()
             skip()
         }
     }
 
+    /// 松开 Esc：停计时器并清空进度
     private func cancelHold() {
+        stopHoldTimer()
+        model.skipProgress = 0
+    }
+
+    private func stopHoldTimer() {
         holdTimer?.invalidate()
         holdTimer = nil
         holdStart = nil
-        model.skipProgress = 0
     }
 
     private func observeScreenChanges() {
@@ -144,7 +209,7 @@ final class OverlayController {
         ) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, self.isVisible else { return }
-                self.buildWindows()
+                self.buildWindows(fadeIn: false)
             }
         }
     }
