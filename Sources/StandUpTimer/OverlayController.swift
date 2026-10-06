@@ -51,11 +51,11 @@ final class OverlayController {
         self.postpone = postpone
     }
 
-    func show(isLongBreak: Bool, total: TimeInterval) {
+    func show(isLongBreak: Bool, total: TimeInterval, theme id: BreakThemeID) {
         // 上一次的淡出还没结束就直接收掉，立即重建
         finishFadeOut()
 
-        let theme = BreakTheme.named(.sunrise)
+        let theme = BreakTheme.named(id)
             .adjusted(increaseContrast: NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast)
         // 主题和流动相位在休息开始时定一次，整段休息不变；多块屏幕共用
         scene = BackdropScene.random(theme: theme)

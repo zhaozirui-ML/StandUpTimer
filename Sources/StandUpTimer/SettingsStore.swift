@@ -8,6 +8,8 @@ enum SettingsKeys {
     static let soundEnabled = "soundEnabled"
     static let soundName = "soundName"
     static let launchAtLogin = "launchAtLogin"
+    /// 休息画面主题："auto" 或主题 id（见 BreakThemeChoice）
+    static let breakTheme = "breakTheme"
 }
 
 /// 设置窗口和菜单栏共用的预设选项
@@ -36,6 +38,7 @@ final class SettingsStore {
             SettingsKeys.soundEnabled: true,
             SettingsKeys.soundName: "Glass",
             SettingsKeys.launchAtLogin: false,
+            SettingsKeys.breakTheme: BreakThemeChoice.auto.rawValue,
         ])
     }
 
@@ -46,4 +49,8 @@ final class SettingsStore {
     var soundEnabled: Bool { defaults.bool(forKey: SettingsKeys.soundEnabled) }
     var soundName: String { defaults.string(forKey: SettingsKeys.soundName) ?? "Glass" }
     var launchAtLogin: Bool { defaults.bool(forKey: SettingsKeys.launchAtLogin) }
+    /// 读到未知值（例如以后删掉的主题）时回落到自动
+    var breakTheme: BreakThemeChoice {
+        defaults.string(forKey: SettingsKeys.breakTheme).flatMap(BreakThemeChoice.init(rawValue:)) ?? .auto
+    }
 }

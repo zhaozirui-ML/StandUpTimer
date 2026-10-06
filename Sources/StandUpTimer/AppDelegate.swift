@@ -45,7 +45,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func handleTransition(from: Phase, to: Phase) {
         if to.isBreak {
             sound.play()
-            overlay.show(isLongBreak: to == .longBreak, total: engine.displayRemaining)
+            // 主题只在休息开始时决定一次：自动模式按此刻的时段和系统外观选
+            let theme = settings.breakTheme.resolve(at: Date(), isDark: BreakThemeChoice.systemIsDark)
+            overlay.show(isLongBreak: to == .longBreak, total: engine.displayRemaining, theme: theme)
             overlay.update(remaining: engine.displayRemaining)
         } else if from.isBreak {
             if to == .working { sound.play() }
