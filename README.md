@@ -11,6 +11,12 @@
 - 🚀 可选开机自启动（设置中开启）
 - 💤 睡眠感知：合盖超过 5 分钟视为已休息，唤醒后重新开始新番茄；短暂睡眠则原地恢复
 
+## 安装
+
+需要 macOS 14 及以上。在 [Releases](https://github.com/zhaozirui-ML/StandUpTimer/releases/latest) 下载 zip，解压后把 `StandUpTimer.app` 拖进「应用程序」文件夹。
+
+App 没有 Apple 开发者证书签名，首次打开会提示“无法验证开发者”。打开「系统设置 → 隐私与安全性」，在页面底部点「仍要打开」，之后就能正常启动。
+
 ## 构建与运行
 
 只需要 Command Line Tools（Swift 6+），不需要 Xcode。
